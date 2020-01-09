@@ -31,7 +31,7 @@ other than the ones listed above.
 HOMEPAGE="https://www.llvm.org/"
 COPYRIGHT="2003-2019 University of Illinois at Urbana-Champaign"
 LICENSE="UIUC"
-REVISION="2"
+REVISION="3"
 SOURCE_URI="https://releases.llvm.org/$portVersion/llvm-$portVersion.src.tar.xz"
 CHECKSUM_SHA256="d6a0565cf21f22e9b4353b2eb92622e8365000a9e90a16b09b56f8157eabfe84"
 SOURCE_DIR="llvm-$portVersion.src"
@@ -423,6 +423,11 @@ REQUIRES_libs="
 	lib:libz$secondaryArchSuffix
 	"
 
+PROVIDES_lit="
+	llvm9${secondaryArchSuffix}_lit = $portVersion
+	cmd:lit = $portVersion compat >= 3
+	"
+
 BUILD_REQUIRES="
 	haiku${secondaryArchSuffix}_devel
 	devel:libz$secondaryArchSuffix
@@ -471,6 +476,9 @@ BUILD()
 
 	make $jobArgs PROJ_datadir=$dataDir PROJ_docsdir=$docDir \
 		PROJ_mandir=$manDir PROJ_includedir=$includeDir PROJ_libdir=$libDir
+
+	# Build LIT
+        $python ../llvm/utils/lit/setup.py build
 }
 
 INSTALL()
@@ -487,6 +495,12 @@ INSTALL()
 
 	make -C projects/compiler-rt install PROJ_datadir=$dataDir PROJ_docsdir=$docDir \
 		PROJ_mandir=$manDir PROJ_includedir=$includeDir PROJ_libdir=$libDir
+
+        # Install LIT.
+        $python ../llvm/utils/lit/setup.py install \
+                --root=/ \
+                --prefix="$prefix" \
+                --skip-build
 
 	if [ -n $secondaryArchSuffix ]; then
 		binDir=$prefix/bin
@@ -542,6 +556,10 @@ INSTALL()
 		$libDir/libLLVM* \
 		$libDir/libLTO* \
 		$libDir/libRemarks*
+
+	# lit package
+	packageEntries lit \
+		$libDir/
 }
 
 TEST()
