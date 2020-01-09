@@ -428,6 +428,18 @@ PROVIDES_lit="
 	cmd:lit = $portVersion compat >= 3
 	"
 
+REQUIRES_lit="
+	haiku$secondaryArchSuffix
+	cmd:python
+	"
+
+CONFILCTS_lit="
+	llvm${secondaryArchSuffix}_lit
+	llvm6${secondaryArchSuffix}_lit
+	llvm7${secondaryArchSuffix}_lit
+	llvm8${secondaryArchSuffix}_lit
+	"
+
 BUILD_REQUIRES="
 	haiku${secondaryArchSuffix}_devel
 	devel:libz$secondaryArchSuffix
