@@ -1,0 +1,151 @@
+From 8cadc68f5228023b5ae5b0ca295a92cba7f93496 Mon Sep 17 00:00:00 2001
+From: Kyle Ambroff-Kao <kyle@ambroffkao.com>
+Date: Thu, 14 May 2020 22:43:58 -0700
+Subject: Search for gethostbyname in libnetwork on Haiku
+
+
+diff --git a/src/aclocal.m4 b/src/aclocal.m4
+index 2394f7e335ce..e577b4fe0319 100644
+--- a/src/aclocal.m4
++++ b/src/aclocal.m4
+@@ -1266,14 +1266,17 @@ AC_DEFUN(AC_LIBRARY_NET, [
+      AC_CHECK_LIB(nsl, gethostbyname, , [
+        # Some strange OSes (SINIX) have it in libsocket:
+        AC_CHECK_LIB(socket, gethostbyname, , [
+-          # Unfortunately libsocket sometimes depends on libnsl.
+-          # AC_CHECK_LIB's API is essentially broken so the following
+-          # ugliness is necessary:
+-          AC_CHECK_LIB(socket, gethostbyname,
+-             LIBS="-lsocket -lnsl $LIBS",
+-               [AC_CHECK_LIB(resolv, gethostbyname,
+-			     LIBS="-lresolv $LIBS" )],
+-             -lnsl)
++          # On Haiku this lives in libnetwork
++          AC_CHECK_LIB(network, gethostbyname, , [
++            # Unfortunately libsocket sometimes depends on libnsl.
++            # AC_CHECK_LIB's API is essentially broken so the following
++            # ugliness is necessary:
++            AC_CHECK_LIB(socket, gethostbyname,
++               LIBS="-lsocket -lnsl $LIBS",
++                 [AC_CHECK_LIB(resolv, gethostbyname,
++                   LIBS="-lresolv $LIBS" )],
++               -lnsl)
++          ])
+        ])
+      ])
+    ])
+-- 
+2.26.0
+
+
+From d88191d4879837a5478b89db8c90b494ae798439 Mon Sep 17 00:00:00 2001
+From: Kyle Ambroff-Kao <kyle@ambroffkao.com>
+Date: Thu, 14 May 2020 22:57:47 -0700
+Subject: Teach the build system how to make shared libraries on Haiku.
+
+
+diff --git a/src/config/shlib.conf b/src/config/shlib.conf
+index 3e4af6c02ed4..8e3b001daa9c 100644
+--- a/src/config/shlib.conf
++++ b/src/config/shlib.conf
+@@ -415,7 +415,7 @@ mips-*-netbsd*)
+ 	RUN_VARS='LD_LIBRARY_PATH'
+ 	;;
+ 
+-*-*-linux* | *-*-gnu* | *-*-k*bsd*-gnu)
++*-*-linux* | *-*-gnu* | *-*-k*bsd*-gnu | *-haiku)
+ 	PICFLAGS=-fPIC
+ 	SHLIBVEXT='.so.$(LIBMAJOR).$(LIBMINOR)'
+ 	SHLIBSEXT='.so.$(LIBMAJOR)'
+-- 
+2.26.0
+
+
+From c0b1367379812727b3b30e503d39419d69eb1858 Mon Sep 17 00:00:00 2001
+From: Kyle Ambroff-Kao <kyle@ambroffkao.com>
+Date: Thu, 14 May 2020 23:10:19 -0700
+Subject: Fix errno.h includes.
+
+
+diff --git a/src/lib/rpc/auth_gssapi.c b/src/lib/rpc/auth_gssapi.c
+index 568ec6d8742c..f74b0bfc996f 100644
+--- a/src/lib/rpc/auth_gssapi.c
++++ b/src/lib/rpc/auth_gssapi.c
+@@ -5,7 +5,7 @@
+ 
+ #include <stdio.h>
+ #include <string.h>
+-#include <sys/errno.h>
++#include <errno.h>
+ 
+ #include <gssapi/gssapi.h>
+ #include <gssapi/gssapi_generic.h>
+diff --git a/src/lib/rpc/bindresvport.c b/src/lib/rpc/bindresvport.c
+index a421dd8ec770..ab333994a3b2 100644
+--- a/src/lib/rpc/bindresvport.c
++++ b/src/lib/rpc/bindresvport.c
+@@ -37,7 +37,7 @@
+ #include <stdint.h>
+ #include <unistd.h>
+ #include <sys/types.h>
+-#include <sys/errno.h>
++#include <errno.h>
+ #include <sys/socket.h>
+ #include <netinet/in.h>
+ #include <gssrpc/rpc.h>
+diff --git a/src/lib/rpc/clnt_generic.c b/src/lib/rpc/clnt_generic.c
+index 79831e1db9a6..a645682c0004 100644
+--- a/src/lib/rpc/clnt_generic.c
++++ b/src/lib/rpc/clnt_generic.c
+@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)clnt_generic.c 1.4 87/08/11 (C) 1987 SMI";
+ #include <string.h>
+ #include <gssrpc/rpc.h>
+ #include <sys/socket.h>
+-#include <sys/errno.h>
++#include <errno.h>
+ #include <netdb.h>
+ 
+ /*
+-- 
+2.26.0
+
+
+From bed17e6e7bedc001eb896987c2d8f4ebff106758 Mon Sep 17 00:00:00 2001
+From: Kyle Ambroff-Kao <kyle@ambroffkao.com>
+Date: Thu, 14 May 2020 23:37:35 -0700
+Subject: Add some missing includes.
+
+
+diff --git a/src/lib/kadm5/logger.c b/src/lib/kadm5/logger.c
+index c6885edf2aab..bd60f452be6c 100644
+--- a/src/lib/kadm5/logger.c
++++ b/src/lib/kadm5/logger.c
+@@ -38,6 +38,11 @@
+ #include <syslog.h>
+ #include <stdarg.h>
+ 
++// FIXME: KWA is this defined somewhere else?
++#ifdef __HAIKU__
++#define LOG_PRIMASK 0x07
++#endif
++
+ #define KRB5_KLOG_MAX_ERRMSG_SIZE       2048
+ #ifndef MAXHOSTNAMELEN
+ #define MAXHOSTNAMELEN  256
+diff --git a/src/lib/rpc/pmap_rmt.c b/src/lib/rpc/pmap_rmt.c
+index 8c7e30c21a03..fb670b8e27c9 100644
+--- a/src/lib/rpc/pmap_rmt.c
++++ b/src/lib/rpc/pmap_rmt.c
+@@ -48,6 +48,9 @@ static char sccsid[] = "@(#)pmap_rmt.c 1.21 87/08/27 Copyr 1984 Sun Micro";
+ #include <gssrpc/pmap_clnt.h>
+ #include <gssrpc/pmap_rmt.h>
+ #include <sys/socket.h>
++#ifdef __HAIKU__
++#include <sys/sockio.h>
++#endif
+ #ifdef sun
+ #include <sys/sockio.h>
+ #endif
+-- 
+2.26.0
+

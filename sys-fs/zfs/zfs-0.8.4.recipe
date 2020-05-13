@@ -1,0 +1,49 @@
+SUMMARY="The OpenZFS filesystem and volume manager"
+DESCRIPTION="OpenZFS is an advanced file system and volume manager which was \
+originally developed for Solaris and is now maintained by the OpenZFS \
+community. This repository contains the code for running OpenZFS on Linux and \
+FreeBSD."
+HOMEPAGE="https://github.com/openzfs/zfs"
+COPYRIGHT="2020 The OpenZFS Project Developers"
+LICENSE="CDDL v1"
+REVISION="1"
+SOURCE_URI="https://github.com/openzfs/zfs/releases/download/zfs-$portVersion/zfs-$portVersion.tar.gz"
+CHECKSUM_SHA256="2b988f5777976f09d08083f6bebf6e67219c4c4c183c1f33033fb7e5e5eacafb"
+SOURCE_DIR="zfs-$portVersion"
+#PATCHES="zfs-$portVersion.patch"
+
+ARCHITECTURES="x86_gcc2 x86 x86_64"
+SECONDARY_ARCHITECTURES="x86_gcc2 x86"
+
+PROVIDES="
+	zfs$secondaryArchSuffix = $portVersion
+	cmd:zpool
+	"
+
+REQUIRES="
+	"
+
+BUILD_REQUIRES="
+	devel:libuuid$secondaryArchSuffix >= 1.3.1
+	devel:libtirpc$secondaryArchSuffix >= 1.2.6
+	"
+
+BUILD_PREREQUIRES="
+	cmd:autoconf
+	cmd:gcc$secondaryArchSuffix
+	cmd:make
+	cmd:pkg_config$secondaryArchSuffix
+	haiku${secondaryArchSuffix}_devel
+	"
+
+BUILD()
+{
+	runConfigure configure
+	make $jobArgs
+}
+
+INSTALL()
+{
+	mkdir -p $prefix/add-ons/kernel/file_systems
+        cp zfs $prefix/add-ons/kernel/file_systems
+}

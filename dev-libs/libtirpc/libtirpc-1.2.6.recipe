@@ -1,0 +1,59 @@
+SUMMARY="A port of Suns Transport-Independent RPC library"
+DESCRIPTION="Libtirpc is a port of Suns Transport-Independent RPC library to \
+Linux (and now Haiku). It's being developed by the Bull GNU/Linux NFSv4 \
+project."
+HOMEPAGE="https://sourceforge.net/projects/libtirpc/"
+COPYRIGHT="2005 Bull S.A."
+LICENSE="BSD (3-clause)"
+REVISION="1"
+SOURCE_URI="https://cfhcable.dl.sourceforge.net/project/libtirpc/libtirpc/$portVersion/libtirpc-$portVersion.tar.bz2"
+CHECKSUM_SHA256="4278e9a5181d5af9cd7885322fdecebc444f9a3da87c526e7d47f7a12a37d1cc"
+SOURCE_DIR="libtirpc-$portVersion"
+ARCHITECTURES="x86_gcc2 x86 x86_64"
+SECONDARY_ARCHITECTURES="x86"
+
+PROVIDES="
+        lib:libtirpc$secondaryArchSuffix = $portVersion
+	"
+REQUIRES="
+	haiku$secondaryArchSuffix
+	"
+
+#PROVIDES_devel="
+#	devel:libtirpc$secondaryArchSuffix = 0.0.0 compat >= 0
+#	"
+
+BUILD_REQUIRES="
+	haiku${secondaryArchSuffix}_devel
+	"
+
+BUILD_PREREQUIRES="
+	cmd:gcc$secondaryArchSuffix
+	cmd:make
+	cmd:autoreconf
+	cmd:libtool
+	cmd:pkg_config$secondaryArchSuffix
+	"
+
+BUILD()
+{
+	autoreconf -vfi
+	runConfigure ./configure
+	make $jobArgs
+}
+
+INSTALL()
+{
+	make install
+
+	# remove libtool files
+	rm "$libDir"/*.la
+
+	prepareInstalledDevelLibs libtirpc
+	fixPkgconfig
+
+	#fixDevelopLibDirReferences "$binDir"/libtirpc-config-2
+
+	packageEntries devel \
+		"$developDir" "$binDir" "$infoDir"
+}
